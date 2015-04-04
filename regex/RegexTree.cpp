@@ -1,5 +1,6 @@
 #include "RegexTree.h"
 
+
 RegexTree::RegexTree(){}
 
 RegexTree::~RegexTree(){
@@ -12,12 +13,14 @@ RegexTree::Node *RegexTree::A() {
 
 	while (true) {
 		Node *r = B();
-		if (r == nullptr) break; 
+		if (r->type == NOTHING) {
+			delete r;
+			break;
+		}
 
 		Node *now = new Node(AND);
-		now->nxt.push_back(l);
-		now->nxt.push_back(r);
-
+		now->nxt.push_back(l); 
+		now->nxt.push_back(r); 
 		l = now;
 	}
 
@@ -26,9 +29,8 @@ RegexTree::Node *RegexTree::A() {
 
 RegexTree::Node *RegexTree::B(){
 	RegexTree::Node *l = C();
-	if (l != nullptr && peek == '*') {
-		match('*');
-
+	if (l->type != NOTHING && peek == '*') {
+		match('*'); 
 		RegexTree::Node *now = new Node(STAR);
 		now->nxt.push_back(l);
 
@@ -44,11 +46,11 @@ RegexTree::Node *RegexTree::C(){
 		l = exp();
 		match(')');
 	} else if (isalnum(peek)) {
-		l = new RegexTree::Node(peek);
-
+		l = new RegexTree::Node(peek); 
 		match(peek);
+	} else {
+		l = new Node(NOTHING);
 	}
-
 	return l;
 }
 
@@ -57,9 +59,15 @@ RegexTree::Node *RegexTree::exp() {
 	while (l && peek == '|') {
 		match('|');
 
+		auto r = A();
+		if (r->type == NOTHING) {
+			fprintf(stderr, "ERROR: except charactor, find NOTHING\n");
+			syntaxError();
+		}
+
 		RegexTree::Node *now = new RegexTree::Node(OR);
 		now->nxt.push_back(l);
-		now->nxt.push_back(A());
+		now->nxt.push_back(r);
 
 		l = now;
 	}
@@ -68,7 +76,8 @@ RegexTree::Node *RegexTree::exp() {
 
 void RegexTree::match(char ch) {
 	if (peek != ch) {
-		printf("expect %c, find '%c'\n", ch, peek);
+		fprintf(stderr, "ERROR: expect %c, find '%c'\n", ch, peek);
+		syntaxError();
 		return; 
 	} 
 	peekNext(); 
@@ -89,8 +98,7 @@ void RegexTree::peekNext(bool skipSpace /*= false*/) {
 }
 
 void RegexTree::build(const char *s) {
-	buffer = s;
-	bufHead = 0;
+	init(s);
 
 	peekNext(true);
 
@@ -98,5 +106,21 @@ void RegexTree::build(const char *s) {
 	root = exp();
 
 	buffer = nullptr; // buffer s may invaild after build
+}
+
+void RegexTree::syntaxError() {
+	isError = true;
+
+	fprintf(stderr, "%s\n", buffer);
+	for (int i = 0; i < bufHead-1; i++) {
+		fprintf(stderr, " ");
+	}
+	fprintf(stderr, "^\n");
+}
+
+void RegexTree::init(const char *buf) {
+	buffer = buf;
+	bufHead = 0;
+	isError = false;
 }
 

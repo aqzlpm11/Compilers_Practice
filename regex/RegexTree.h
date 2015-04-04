@@ -8,18 +8,29 @@
 
 class RegexTree{
 	public:
+	friend class Trans;
+
 	RegexTree();
 	~RegexTree();
 
 	enum {
+		NOTHING = 0,
 		STAR = 256,
 		AND,
 		OR
 	};
 
 	struct Node{
-		Node(int tp):type(tp){}
+		int type;
+		std::vector<Node *> nxt; 
 
+		// for DFA
+		bool nullable = false;
+		std::vector<int> firstpos;
+		std::vector<int> lastpos;
+
+
+		Node(int tp):type(tp){}
 		~Node() {
 			for (int i = 0; i < nxt.size(); i++) {
 				delete nxt[i];
@@ -27,7 +38,9 @@ class RegexTree{
 		}
 
 		void show() const {
-			if (0 <= type  && type < 256) { printf("%c", type); } else if (type == STAR) {
+			if (0 < type  && type < 256) { 
+				printf("%c", type); 
+			} else if (type == STAR) {
 				printf("(");
 				nxt[0]->show();
 				printf(")*");
@@ -47,16 +60,18 @@ class RegexTree{
 			}
 		}
 
-		int type;
-		std::vector<Node *> nxt;
 	};
 
 
 	void build(const char *str);
 
-	Node const* getRoot() const { 
-		if (root == nullptr) fprintf(stderr, "Warming: RegexTree::root == nullptr\n");
+	Node const* getRoot() const { if (root == nullptr) fprintf(stderr, "Warming: RegexTree::root == nullptr\n");
 		return root; 
+	}
+
+	void show() const {
+		if (isError) puts("Can't Show RegexTree: Syntax ERROR");
+		else root->show();
 	}
 
 	private:
@@ -68,11 +83,19 @@ class RegexTree{
 	void match(char ch);
 	void peekNext(bool skipSpace = false) ;
 
+	void syntaxError();
+
+	void init(const char *buf);
+
 	char peek = ' ';
 	Node *root = nullptr;
+
+	bool isError = false;
 
 	// buffer of the regex
 	const char *buffer = nullptr;
 	int bufHead = 0;
+
 };
+
 #endif
