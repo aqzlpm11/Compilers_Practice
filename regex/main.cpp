@@ -5,12 +5,15 @@
 int main() {
 	RegexTree tree;
 
-	//tree.build("(a|b)*abb");
-	tree.build("a|b");
-	tree.show();
+	tree.build("(a|b)*abb");
+	//tree.build("a*|b*");
+	//tree.build("a|b");
 
 	DFA a;
 	Trans::createDFAByTree(tree, a);
+
+	puts("");
+	tree.show();
 
 	puts("");
 

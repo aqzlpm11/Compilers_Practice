@@ -37,9 +37,7 @@ RegexTree::Node *RegexTree::B(){
 		l = now;
 	}
 	return l;
-}
-
-RegexTree::Node *RegexTree::C(){
+} RegexTree::Node *RegexTree::C(){
 	RegexTree::Node *l = nullptr;
 	if (peek == '(') {
 		match('(');
