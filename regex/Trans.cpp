@@ -3,6 +3,10 @@
 
 #include <cassert>
 #include <algorithm>
+#include <vector>
+#include <stack>
+#include <queue>
+#include <map>
 using namespace std;
 
 template <class T>
@@ -17,9 +21,9 @@ static void vector_unin(vector<T> &OUT, const vector<T> &a, const vector<T> &b){
 			);
 }
 
-// Nullable Firstpos Lastpos Followpos
-static int callNFLF_idCnt;
+// Nullable Firstpos Lastpos Followpos static int callNFLF_idCnt;
 static vector<RegexTree::Node *> id2node;
+static int callNFLF_idCnt;
 
 static void init_callNFLF() {
 	callNFLF_idCnt = 1;
@@ -151,7 +155,15 @@ static void callNFLF(RegexTree::Node *root) {
 
 void Trans::createDFAByTree(const RegexTree &tree, DFA &dfa_OUT) {
 	init_callNFLF();
-	callNFLF(tree.root);
+
+	RegexTree::Node sharpNode('#');
+
+	RegexTree::Node sharpAndNode(RegexTree::AND);
+	sharpAndNode.nxt.push_back(tree.root);
+	sharpAndNode.nxt.push_back(&sharpNode);
+
+	callNFLF(&sharpAndNode);
+
 
 	puts("--- followpos ---");
 	for (int i = 1; i < id2node.size(); i++) {
@@ -163,5 +175,111 @@ void Trans::createDFAByTree(const RegexTree &tree, DFA &dfa_OUT) {
 		}
 		printf(" } \n");
 	}
-}
 
+
+	dfa_OUT.clear();
+
+	map< vector<int>, int> stateId;
+	queue< vector<int> > que;
+	int idtot = 0;
+
+	que.push(sharpAndNode.firstpos);
+	stateId[sharpAndNode.firstpos] = idtot++;
+	while (!que.empty()) {
+		auto followNodes = que.front();
+		que.pop();
+
+		// 如果包含 '#' 结点， 则这个状态是接受状态
+		if (followNodes.back() == callNFLF_idCnt-1) {
+			dfa_OUT.isFinal[ stateId[followNodes] ] = true;
+		}
+
+		for (int ch = 0; ch < 255; ch++) {
+			vector<int> nextFollows;
+			for (int i = 0; i < followNodes.size(); i++) {
+				if (id2node[ followNodes[i] ]->type == ch) {
+					vector<int> tmp = nextFollows;
+					vector_unin(nextFollows, tmp, id2node[ followNodes[i] ]->followpos);
+				}
+			}
+
+			if (!nextFollows.empty()) {
+				if (stateId.find(nextFollows) == stateId.end()) {
+					stateId[nextFollows] = idtot++;
+					que.push(nextFollows);
+				}
+
+				dfa_OUT.next[ stateId[followNodes] ][ch] = stateId[nextFollows];
+			}
+		}
+	}
+
+	dfa_OUT.size = idtot;
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+//	stack<vector<int> > Dstates;
+//	Dstates.push(sharpAndNode.firstpos);
+//
+//	map<vector<int>, int> vis;
+//
+//	dfa_OUT.clear();
+//
+//	int dfaIds = 0;
+//	vis[Dstates.top()] = dfaIds++;
+//	while (!Dstates.empty()) {
+//		auto S = Dstates.top();
+//		Dstates.pop();
+//
+//
+//		for (int i = 0; i < 255; i++) {
+//			vector<int> U;
+//			for (int j = 0; j < S.size(); j++) {
+//				if (id2node[ S[j] ]->type == i) {
+//					vector<int> tmp = U;
+//					vector_unin(U, tmp, id2node[ S[j] ]->followpos);
+//				}
+//			}
+//
+//			if (U.size()) {
+//				if (vis.find(U) == vis.end()) {
+//					vis[U] = dfaIds++;
+//					Dstates.push(U);
+//				}
+//
+//				dfa_OUT.next[vis[S]][i] = vis[U];
+//			}
+//		}
+//	}
+//
+//	dfa_OUT.size = dfaIds;
+
+	sharpAndNode.nxt.clear(); // important: Don't delete it's children  when it release
+}
